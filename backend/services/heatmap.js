@@ -1,8 +1,9 @@
 const turf = require('@turf/turf')
 
-const TREES_PER_M2    = 1 / 50
+const TREES_PER_M2     = 1 / 50
 const COOLING_PER_TREE = 0.003
 const MIN_TEMP         = 22
+const MAX_COOLING      = 6    // °C — hard cap per polygon (diminishing returns)
 
 /**
  * Annotates each polygon with treeCount, areaM2, and cooling,
@@ -18,7 +19,11 @@ function processPolygons(points, polygons) {
   for (const polygon of polygons) {
     const areaM2 = turf.area(polygon)
     const treeCount = Math.floor(areaM2 * TREES_PER_M2)
-    const cooling = treeCount * COOLING_PER_TREE
+    const linearCooling = treeCount * COOLING_PER_TREE
+    // Logarithmic diminishing returns: cooling grows fast at first, then flattens
+    // log1p(x) / log1p(scale) maps [0, scale] → [0, 1], then multiply by MAX_COOLING
+    const scale = MAX_COOLING / COOLING_PER_TREE  // ~2000 trees for full effect
+    const cooling = MAX_COOLING * (Math.log1p(linearCooling / COOLING_PER_TREE) / Math.log1p(scale))
     polygon.properties = polygon.properties || {}
     polygon.properties.areaM2 = areaM2
     polygon.properties.treeCount = treeCount

@@ -22,6 +22,26 @@ GreenArc's value proposition is speed without sacrifice of rigour. The underlyin
 
 ---
 
+## Designed for Everyone
+
+GreenArc is a professional-grade tool that does not require professional training to use.
+
+The interface is intentionally simple. There are no configuration files to edit, no coordinate systems to understand, no GIS software to install. A user opens the map, draws a shape around an area they care about, and the tool does the rest — calculating temperatures, estimating costs, identifying boroughs, and generating a plain-English briefing. The entire workflow can be completed in under two minutes by anyone who has never encountered urban planning software before.
+
+This accessibility is a deliberate design principle, not a concession. The problems that GreenArc addresses — heat, air quality, mental health, neighbourhood liveability — are felt most acutely by ordinary residents, not by the professionals who plan for them. Giving non-specialists the same analytical tools as city hall means that community groups, residents' associations, school pupils, local journalists, and engaged citizens can all participate meaningfully in conversations about their urban environment.
+
+**A tenant association** concerned about the lack of shade in a housing estate can draw a zone, produce a temperature reduction estimate, and arrive at a council meeting with a structured, costed proposal rather than a petition.
+
+**A secondary school class** studying urban geography or climate change can interact directly with real London heat data, model the impact of planting decisions, and develop an intuitive understanding of the Urban Heat Island effect that no textbook diagram can replicate.
+
+**A local journalist** covering a heatwave or a planning controversy can use GreenArc to generate independent, quantified analysis of a proposed intervention — or the absence of one — without relying solely on figures supplied by the developers or the council.
+
+**A community garden organiser** exploring whether a stretch of vacant land could be planted can get a rapid, credible environmental and financial case together before approaching funders or landowners.
+
+The simplicity of the interface means that the barrier to entry is not skill — it is simply the decision to try. GreenArc is for anyone who lives in a city and wants to understand, or change, the environment around them.
+
+---
+
 ## Why Urban Green Spaces Matter
 
 Cities are increasingly hostile environments for human wellbeing. Dense infrastructure, hard surfaces, vehicle traffic, and the near-total absence of nature create what researchers call "green deprivation" — a condition with measurable, serious consequences for both physical and mental health.

@@ -1,0 +1,87 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self' 'unsafe-inline' data: blob:; script-src 'self' 'unsafe-eval' 'unsafe-inline' data: blob:; style-src 'self' 'unsafe-inline'; img-src 'self' https: data: blob:; connect-src 'self' ws: wss: http: https:;"
+    />
+    <title>GreenArc</title>
+  </head>
+  <body>
+    <main class="app-shell">
+      <section id="map" class="map-panel"></section>
+      <div id="sidebar-resizer" class="sidebar-resizer" role="separator" aria-label="Resize sidebar"></div>
+      <aside class="side-panel">
+        <div class="panel-content">
+          <header class="panel-header">
+            <div class="panel-header-row">
+              <h1>GreenArc</h1>
+              <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Toggle color theme">
+                Dark Mode
+              </button>
+            </div>
+            <p>London Tree Planting Impact Simulator</p>
+            <p id="points-source" class="points-source">Data source: loading...</p>
+            <div class="divider" aria-hidden="true"></div>
+          </header>
+
+          <section class="map-controls" aria-label="Map Controls">
+            <label class="control-row" for="heatmap-toggle">
+              <span>Heatmap</span>
+              <input id="heatmap-toggle" type="checkbox" checked />
+            </label>
+
+            <label class="control-row" for="map-type-select">
+              <span>Map Type</span>
+              <select id="map-type-select">
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+                <option value="street">Street</option>
+              </select>
+            </label>
+          </section>
+
+          <section class="metrics-grid" aria-label="Impact Metrics">
+            <article class="metric-card">
+              <h2>Avg Temperature</h2>
+              <p id="metric-avg-temp" class="metric-value">—</p>
+              <p id="metric-avg-temp-sub" class="metric-sub">Recalculate after drawing zones</p>
+            </article>
+            <article class="metric-card">
+              <h2>Trees Planted</h2>
+              <p id="metric-trees" class="metric-value">—</p>
+              <p id="metric-trees-sub" class="metric-sub">across 0 zones</p>
+            </article>
+            <article class="metric-card">
+              <h2>Total Cost</h2>
+              <p id="metric-cost" class="metric-value">—</p>
+              <p id="metric-cost-sub" class="metric-sub">at £500 per tree</p>
+            </article>
+            <article class="metric-card">
+              <h2>Payback Period</h2>
+              <p id="metric-payback" class="metric-value">—</p>
+              <p id="metric-payback-sub" class="metric-sub">based on energy savings</p>
+            </article>
+          </section>
+
+          <button id="recalculate-button" class="action-button action-primary" disabled>
+            Recalculate Impact
+          </button>
+
+          <section class="briefing-panel" aria-label="AI Planning Briefing">
+            <h2>Planning Briefing</h2>
+            <p id="briefing-body">
+              Draw one or more canopy zones and click Recalculate Impact to generate updated impact metrics.
+            </p>
+          </section>
+        </div>
+
+        <footer class="panel-footer">
+          <button id="reset-button" class="action-button action-danger-outline">Reset All</button>
+        </footer>
+      </aside>
+    </main>
+  </body>
+</html>

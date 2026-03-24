@@ -3,7 +3,7 @@ const Anthropic = require('@anthropic-ai/sdk')
 
 const SYSTEM_PROMPT = `You are an expert urban planning advisor for the Mayor of London's office.
 You write clear, confident, data-driven briefings for senior policymakers and city councillors.
-Keep your response to exactly 3 short paragraphs. Do not use bullet points, headers, or markdown formatting.
+Keep your response to exactly 2 short paragraphs. Do not use bullet points, headers, or markdown formatting.
 Write in plain English — authoritative but accessible. Reference the specific numbers and place names provided.`
 
 const REQUIRED_FIELDS = [
@@ -33,34 +33,19 @@ module.exports = function briefingRouter() {
 
 Write a concise planning briefing covering: (1) the environmental impact and why it matters for London specifically, (2) the financial case and value for public money, and (3) a practical recommendation on tree species or planting strategy suited to dense urban London neighbourhoods.`
 
-    res.setHeader('Content-Type', 'text/event-stream')
-    res.setHeader('Cache-Control', 'no-cache')
-    res.setHeader('Connection', 'keep-alive')
-
     try {
-      const stream = await anthropic.messages.stream({
+      const message = await anthropic.messages.create({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 1000,
         system: SYSTEM_PROMPT,
         messages: [{ role: 'user', content: userPrompt }],
       })
 
-      for await (const event of stream) {
-        if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
-          res.write('data: ' + event.delta.text + '\n\n')
-        }
-      }
-
-      res.write('data: [DONE]\n\n')
-      res.end()
+      const text = message.content[0].text
+      res.json({ briefing: text })
     } catch (err) {
       console.error('Claude API error:', err)
-      // Headers already sent — write error as SSE then close, or if not sent yet respond 500
-      if (!res.headersSent) {
-        return res.status(500).json({ error: 'Briefing generation failed. Please try again.' })
-      }
-      res.write('data: [DONE]\n\n')
-      res.end()
+      res.status(500).json({ error: 'Briefing generation failed. Please try again.' })
     }
   })
 

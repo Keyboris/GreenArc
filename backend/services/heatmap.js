@@ -30,7 +30,8 @@ function processPolygons(points, polygons) {
     point.currentTemp = point.baseTemp
   }
 
-  // Apply cooling — each point belongs to at most one polygon
+  // Apply cooling and track which points fall inside any polygon
+  const affected = []
   for (const point of points) {
     for (const polygon of polygons) {
       const turfPoint = turf.point([point.lng, point.lat])
@@ -38,12 +39,13 @@ function processPolygons(points, polygons) {
         point.currentTemp = parseFloat(
           Math.max(MIN_TEMP, point.baseTemp - polygon.properties.cooling).toFixed(2)
         )
+        affected.push(point)
         break
       }
     }
   }
 
-  return points
+  return affected
 }
 
 module.exports = { processPolygons }

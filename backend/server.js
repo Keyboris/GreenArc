@@ -20,7 +20,7 @@ app.use(cors({ origin: 'http://localhost:5173' }))
 app.use(express.json())
 
 app.use('/api/points',      pointsRouter(points))
-app.use('/api/recalculate', recalculateRouter())
+app.use('/api/recalculate', recalculateRouter(points))
 app.use('/api/briefing',    briefingRouter())
 
 const PORT = process.env.PORT || 3001

@@ -14,11 +14,15 @@ function computeMetrics(points, polygons) {
   const totalAreaM2 = polygons.reduce((sum, p) => sum + p.properties.areaM2, 0)
   const totalCost   = totalTrees * COST_PER_TREE
   const annualBenefit = totalTrees * ANNUAL_BENEFIT_PER_TREE
-  const paybackYears  = Math.round(totalCost / annualBenefit)
+  const paybackYears  = annualBenefit > 0 ? Math.round(totalCost / annualBenefit) : 0
 
-  const avgTempBefore = points.reduce((sum, p) => sum + p.baseTemp, 0) / points.length
-  const avgTempAfter  = points.reduce((sum, p) => sum + p.currentTemp, 0) / points.length
-  const tempDelta     = parseFloat((avgTempAfter - avgTempBefore).toFixed(2))
+  const avgTempBefore = points.length > 0
+    ? points.reduce((sum, p) => sum + p.baseTemp, 0) / points.length
+    : 0
+  const avgTempAfter = points.length > 0
+    ? points.reduce((sum, p) => sum + p.currentTemp, 0) / points.length
+    : 0
+  const tempDelta = parseFloat((avgTempAfter - avgTempBefore).toFixed(2))
 
   return {
     avgTempBefore: parseFloat(avgTempBefore.toFixed(2)),

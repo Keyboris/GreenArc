@@ -3,15 +3,11 @@ const { processPolygons } = require('../services/heatmap')
 const { computeMetrics }  = require('../services/metrics')
 const { getBoroughs }     = require('../services/borough')
 
-module.exports = function recalculateRouter() {
+module.exports = function recalculateRouter(points) {
   const router = Router()
 
   router.post('/', async (req, res) => {
-    const { points: rawPoints, polygons } = req.body
-
-    if (!rawPoints || !Array.isArray(rawPoints) || rawPoints.length === 0) {
-      return res.status(400).json({ error: 'points array is required.' })
-    }
+    const { polygons } = req.body
 
     if (!polygons || !Array.isArray(polygons) || polygons.length === 0) {
       return res.status(400).json({ error: 'At least one polygon is required.' })
@@ -28,15 +24,12 @@ module.exports = function recalculateRouter() {
       }
     }
 
-    // Normalise client points — treat incoming temp as the baseline
-    const points = rawPoints.map(p => ({ lat: p.lat, lng: p.lng, baseTemp: p.temp, currentTemp: p.temp }))
-
-    processPolygons(points, polygons)
-    const metrics = computeMetrics(points, polygons)
+    const affectedPoints = processPolygons(points, polygons)
+    const metrics = computeMetrics(affectedPoints, polygons)
     const boroughs = await getBoroughs(polygons)
 
     res.json({
-      points: points.map(p => ({ lat: p.lat, lng: p.lng, temp: p.currentTemp })),
+      points: affectedPoints.map(p => ({ lat: p.lat, lng: p.lng, temp: p.currentTemp })),
       metrics: { ...metrics, boroughs },
     })
   })

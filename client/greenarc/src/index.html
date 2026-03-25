@@ -8,9 +8,24 @@
       content="default-src 'self' 'unsafe-inline' data: blob:; script-src 'self' 'unsafe-eval' 'unsafe-inline' data: blob:; style-src 'self' 'unsafe-inline'; img-src 'self' https: data: blob:; connect-src 'self' ws: wss: http: https:;"
     />
     <title>GreenArc</title>
+    <script>
+      window.CESIUM_BASE_URL = '../cesiumStatic';
+    </script>
   </head>
   <body>
     <main class="app-shell">
+      <section class="map-search-overlay" aria-label="Place search">
+        <form id="place-search-form" class="search-form">
+          <input
+            id="place-search-input"
+            type="search"
+            placeholder="Search places in London"
+            autocomplete="off"
+          />
+          <button id="place-search-button" type="submit">Find</button>
+        </form>
+        <div id="place-search-results" class="search-results" aria-live="polite"></div>
+      </section>
       <section id="map" class="map-panel"></section>
       <div id="sidebar-resizer" class="sidebar-resizer" role="separator" aria-label="Resize sidebar"></div>
       <aside class="side-panel">
@@ -28,6 +43,14 @@
           </header>
 
           <section class="map-controls" aria-label="Map Controls">
+            <label class="control-row" for="map-mode-select">
+              <span>Map Mode</span>
+              <select id="map-mode-select">
+                <option value="2d">2D</option>
+                <option value="3d">3D Globe</option>
+              </select>
+            </label>
+
             <label class="control-row" for="heatmap-toggle">
               <span>Heatmap</span>
               <input id="heatmap-toggle" type="checkbox" checked />

@@ -14,7 +14,10 @@ import { rendererConfig } from './webpack.renderer.config';
 const DEV_CONTENT_SECURITY_POLICY = [
   "default-src 'self' 'unsafe-inline' data: blob:",
   "script-src 'self' 'unsafe-eval' 'unsafe-inline' data: blob:",
+  "style-src 'self' 'unsafe-inline'",
   "img-src 'self' https: data: blob:",
+  "connect-src 'self' ws: wss: http: https: data: blob:",
+  "worker-src 'self' blob:",
 ].join('; ');
 
 const config: ForgeConfig = {

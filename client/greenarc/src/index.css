@@ -70,8 +70,7 @@ body {
 }
 
 .app-shell {
-  display: flex;
-  flex-direction: row;
+  position: relative;
   height: 100vh;
   width: 100vw;
 }
@@ -98,20 +97,166 @@ body {
   z-index: 1000;
 }
 
-.side-panel {
-  flex: 0 0 360px;
-  min-width: 320px;
+.leaflet-bottom .leaflet-left {
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.leaflet-bottom .leaflet-control.leaflet-draw {
+  margin: 0 0 16px;
+}
+
+.map-search-overlay {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 1300;
+  width: min(420px, calc(100vw - 32px));
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in oklab, var(--card-border) 70%, transparent);
+  background: color-mix(in oklab, var(--panel-bg) 86%, transparent);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.2);
+}
+
+.search-form {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+
+.search-form input {
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
   background: var(--panel-bg);
-  border: none;
+  color: var(--text);
+  padding: 8px 10px;
+  font-size: 0.86rem;
+}
+
+.search-form button {
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: var(--accent);
+  color: #ffffff;
+  padding: 8px 12px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.search-results {
+  margin-top: 8px;
+  max-height: 180px;
+  overflow-y: auto;
+  display: grid;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.search-result-item {
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  background: var(--panel-bg);
+  color: var(--text);
+  text-align: left;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.search-result-item:hover {
+  background: var(--card-bg);
+}
+
+.leaflet-bottom .leaflet-draw-toolbar {
+  display: inline-flex;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.24);
+}
+
+.leaflet-bottom .leaflet-draw-toolbar a {
+  float: none;
+  border-bottom: 0;
+  border-right: 1px solid rgba(15, 23, 42, 0.14);
+  width: 34px;
+  height: 34px;
+  line-height: 34px;
+}
+
+.leaflet-bottom .leaflet-draw-toolbar a:last-child {
+  border-right: 0;
+}
+
+.leaflet-bottom .leaflet-draw-actions {
+  left: 0;
+  right: auto;
+  margin-top: 8px;
+}
+
+.map-floating-toolbar {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  z-index: 1300;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in oklab, var(--card-border) 70%, transparent);
+  background: color-mix(in oklab, var(--panel-bg) 86%, transparent);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.2);
+}
+
+.map-floating-toolbar button {
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  background: var(--panel-bg);
+  color: var(--text);
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.map-floating-toolbar button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.toolbar-status {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  max-width: 180px;
+}
+
+.side-panel {
+  position: absolute;
+  top: 20px;
+  right: 16px;
+  bottom: auto;
+  max-height: min(78vh, 760px);
+  width: min(390px, calc(100vw - 32px));
+  min-width: 320px;
+  background: color-mix(in oklab, var(--panel-bg) 86%, transparent);
+  backdrop-filter: blur(12px);
+  border: 1px solid color-mix(in oklab, var(--card-border) 70%, transparent);
+  border-radius: 16px;
+  box-shadow:
+    0 16px 40px rgba(15, 23, 42, 0.24),
+    0 2px 8px rgba(15, 23, 42, 0.16);
   display: flex;
   flex-direction: column;
+  z-index: 1300;
+  overflow: hidden;
 }
 
 .sidebar-resizer {
-  flex: 0 0 8px;
-  cursor: col-resize;
-  background: transparent;
-  position: relative;
+  display: none;
 }
 
 .sidebar-resizer::before {
@@ -133,7 +278,7 @@ body.is-resizing {
 .panel-content {
   flex: 1;
   overflow-y: auto;
-  padding: 18px;
+  padding: 18px 18px 12px;
 }
 
 .panel-header h1 {
@@ -309,8 +454,8 @@ body.is-resizing {
 }
 
 .panel-footer {
-  padding: 16px 18px;
-  border-top: none;
+  padding: 14px 18px 18px;
+  border-top: 1px solid color-mix(in oklab, var(--card-border) 65%, transparent);
 }
 
 .action-danger-outline {
@@ -321,4 +466,32 @@ body.is-resizing {
 
 .action-danger-outline:hover {
   background: var(--danger-soft);
+}
+
+@media (max-width: 900px) {
+  .side-panel {
+    top: auto;
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    width: auto;
+    min-width: 0;
+    max-height: 62vh;
+  }
+
+  .leaflet-bottom .leaflet-control.leaflet-draw {
+    margin-bottom: calc(62vh + 20px);
+  }
+
+  .map-floating-toolbar {
+    left: 8px;
+    bottom: calc(62vh + 12px);
+    max-width: calc(100vw - 16px);
+  }
+
+  .map-search-overlay {
+    width: calc(100vw - 16px);
+    left: 8px;
+    top: 8px;
+  }
 }

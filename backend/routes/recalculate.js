@@ -2,6 +2,7 @@ const { Router } = require('express')
 const { processPolygons } = require('../services/heatmap')
 const { computeMetrics }  = require('../services/metrics')
 const { getBoroughs }     = require('../services/borough')
+const { isWithinCentralLondon } = require('../services/geo-bounds')
 
 module.exports = function recalculateRouter(points) {
   const router = Router()
@@ -25,11 +26,12 @@ module.exports = function recalculateRouter(points) {
     }
 
     const affectedPoints = processPolygons(points, polygons)
-    const metrics = computeMetrics(affectedPoints, polygons)
+    const londonPoints = affectedPoints.filter(p => isWithinCentralLondon(p.lat, p.lng))
+    const metrics = computeMetrics(londonPoints, polygons)
     const boroughs = await getBoroughs(polygons)
 
     res.json({
-      points: affectedPoints.map(p => ({ lat: p.lat, lng: p.lng, temp: p.currentTemp })),
+      points: londonPoints.map(p => ({ lat: p.lat, lng: p.lng, temp: p.currentTemp })),
       metrics: { ...metrics, boroughs },
     })
   })

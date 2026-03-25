@@ -3,6 +3,7 @@ const fs      = require('fs')
 const path    = require('path')
 const express = require('express')
 const cors    = require('cors')
+const { isWithinCentralLondon } = require('./services/geo-bounds')
 
 const pointsRouter      = require('./routes/points')
 const recalculateRouter = require('./routes/recalculate')
@@ -10,6 +11,7 @@ const briefingRouter    = require('./routes/briefing')
 
 // Load point cloud once at startup
 const points = JSON.parse(fs.readFileSync(path.join(__dirname, 'data/heatmap_points.json'), 'utf8'))
+  .filter(p => isWithinCentralLondon(p.lat, p.lng))
   .map(p => ({ ...p, baseTemp: p.temp, currentTemp: p.temp }))
 
 console.log(`Loaded ${points.length} heatmap points`)

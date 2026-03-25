@@ -4,13 +4,34 @@ import type { HeatPoint } from '../types/app-types';
 const FALLBACK_MIN_TEMP = 22;
 const FALLBACK_MAX_TEMP = 35;
 const MIN_DYNAMIC_RANGE = 2.0;
+const NORMALIZATION_LOW_PERCENTILE = 0.1;
+const NORMALIZATION_HIGH_PERCENTILE = 0.95;
 
 type HeatNormalizer = (temp: number) => number;
+
+const getPercentile = (sortedValues: number[], percentile: number): number => {
+  if (!sortedValues.length) {
+    return 0;
+  }
+
+  const bounded = Math.max(0, Math.min(1, percentile));
+  const position = bounded * (sortedValues.length - 1);
+  const lowerIndex = Math.floor(position);
+  const upperIndex = Math.ceil(position);
+
+  if (lowerIndex === upperIndex) {
+    return sortedValues[lowerIndex];
+  }
+
+  const weight = position - lowerIndex;
+  return sortedValues[lowerIndex] + (sortedValues[upperIndex] - sortedValues[lowerIndex]) * weight;
+};
 
 const createHeatNormalizer = (points: HeatPoint[]): HeatNormalizer => {
   const temps = points
     .map((point) => point.currentTemp)
-    .filter((temp) => Number.isFinite(temp));
+    .filter((temp) => Number.isFinite(temp))
+    .sort((a, b) => a - b);
 
   if (temps.length < 2) {
     return (temp: number): number => {
@@ -21,8 +42,8 @@ const createHeatNormalizer = (points: HeatPoint[]): HeatNormalizer => {
     };
   }
 
-  let minTemp = Math.min(...temps);
-  let maxTemp = Math.max(...temps);
+  let minTemp = getPercentile(temps, NORMALIZATION_LOW_PERCENTILE);
+  let maxTemp = getPercentile(temps, NORMALIZATION_HIGH_PERCENTILE);
 
   // Prevent near-flat datasets from collapsing into one color bucket.
   if (maxTemp - minTemp < MIN_DYNAMIC_RANGE) {
@@ -34,8 +55,8 @@ const createHeatNormalizer = (points: HeatPoint[]): HeatNormalizer => {
   return (temp: number): number => {
     const raw = (temp - minTemp) / (maxTemp - minTemp);
     const clamped = Math.max(0, Math.min(1, raw));
-    // Increase visual strength as temperature rises.
-    const contrasted = Math.pow(clamped, 1.25);
+    // Keep high-end reds for true hotspots instead of most points.
+    const contrasted = Math.pow(clamped, 1.2);
     return 0.05 + contrasted * 0.95;
   };
 };
@@ -68,14 +89,12 @@ export const createHeatLayer = (map: L.Map, points: HeatPoint[]): L.Layer => {
   return heatLayerFactory(points.map((point) => toHeatTuple(point, normalizeHeat)), {
     radius: 22,
     blur: 26,
-    minOpacity: 0.2,
+    minOpacity: 0.08,
     gradient: {
-      0.05: '#fff7bf',
-      0.25: '#ffe066',
-      0.45: '#ffb347',
-      0.65: '#ff8c42',
-      0.82: '#ff5a36',
-      1.0: '#e11d1d',
+      0.05: 'rgba(255,255,255,0.08)',
+      0.3: 'rgba(255,255,255,0.25)',
+      0.6: 'rgba(255,255,255,0.55)',
+      1.0: 'rgba(255,255,255,0.95)',
     },
   }).addTo(map);
 };

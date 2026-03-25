@@ -9,8 +9,10 @@ export interface HeatPoint {
   currentTemp: number;
 }
 
+export type PolygonLayerHandle = L.Polygon | string;
+
 export interface DrawnPolygon {
-  layer: L.Polygon;
+  layer: PolygonLayerHandle;
   feature: GeoPolygonFeature;
   areaM2: number;
   treeCount: number;

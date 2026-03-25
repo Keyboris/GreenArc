@@ -29,7 +29,7 @@ const extractPolygonLayers = (layers: L.LayerGroup): L.Polygon[] => {
 export interface DrawEventHandlers {
   onPolygonCreated: (polygon: Pick<DrawnPolygon, 'layer' | 'feature'>) => void;
   onPolygonsEdited: (polygons: Array<Pick<DrawnPolygon, 'layer' | 'feature'>>) => void;
-  onPolygonsDeleted: (layers: L.Polygon[]) => void;
+  onPolygonsDeleted: (layers: Array<DrawnPolygon['layer']>) => void;
 }
 
 export const installDrawControls = (
@@ -38,6 +38,7 @@ export const installDrawControls = (
   handlers: DrawEventHandlers,
 ): void => {
   const drawControl = new L.Control.Draw({
+    position: 'bottomleft',
     draw: {
       polygon: {
         allowIntersection: false,

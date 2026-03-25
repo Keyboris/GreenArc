@@ -13,9 +13,10 @@ import {
   UnsupportedRecalculateProvider,
 } from './adapters/recalculate-provider';
 import { derivePolygonImpact } from './logic/calc-impact';
-import { installDrawControls } from './map/draw-controls';
-import { updateHeatLayer } from './map/heat-layer';
-import { createMapContext, type BaseMapType } from './map/map-init';
+import { createCesiumEngine } from './map/cesium-engine';
+import { createLeafletEngine } from './map/leaflet-engine';
+import type { MapEngine, MapMode } from './map/map-engine';
+import type { BaseMapType } from './map/map-init';
 import { createInitialState, resetPointsToBaseline } from './state/store';
 import { renderPanel, type PanelElements } from './ui/panel-render';
 
@@ -24,12 +25,23 @@ type ThemeMode = 'light' | 'dark';
 const THEME_STORAGE_KEY = 'urban-canopy-theme';
 const SIDEBAR_WIDTH_STORAGE_KEY = 'urban-canopy-sidebar-width';
 const MAP_TYPE_STORAGE_KEY = 'urban-canopy-map-type';
+const MAP_MODE_STORAGE_KEY = 'urban-canopy-map-mode';
 const HEATMAP_VISIBLE_STORAGE_KEY = 'urban-canopy-heatmap-visible';
 const SIDEBAR_MIN_WIDTH = 300;
 const SIDEBAR_MAX_WIDTH_RATIO = 0.55;
 
+interface PlaceSearchResult {
+  display_name: string;
+  lat: string;
+  lon: string;
+}
+
 const isBaseMapType = (value: string | null): value is BaseMapType => {
   return value === 'light' || value === 'dark' || value === 'street';
+};
+
+const isMapMode = (value: string | null): value is MapMode => {
+  return value === '2d' || value === '3d';
 };
 
 const getElement = <T extends HTMLElement>(id: string): T => {
@@ -95,7 +107,7 @@ const applyTheme = (theme: ThemeMode): void => {
   }
 };
 
-const initSidebarResize = (map: L.Map): void => {
+const initSidebarResize = (onResize: () => void): void => {
   const sidebar = document.querySelector('.side-panel') as HTMLElement | null;
   const resizer = document.getElementById('sidebar-resizer');
 
@@ -114,10 +126,7 @@ const initSidebarResize = (map: L.Map): void => {
     sidebar.style.flexBasis = `${clamped}px`;
     window.localStorage.setItem(SIDEBAR_WIDTH_STORAGE_KEY, String(clamped));
 
-    // Leaflet needs explicit invalidation after container size changes.
-    window.requestAnimationFrame(() => {
-      map.invalidateSize();
-    });
+    window.requestAnimationFrame(onResize);
   };
 
   const storedWidth = Number(window.localStorage.getItem(SIDEBAR_WIDTH_STORAGE_KEY));
@@ -172,8 +181,12 @@ const bootstrap = async (): Promise<void> => {
 
   const panelElements = getPanelElements();
   const themeToggle = getElement<HTMLButtonElement>('theme-toggle');
+  const mapModeSelect = getElement<HTMLSelectElement>('map-mode-select');
   const heatmapToggle = getElement<HTMLInputElement>('heatmap-toggle');
   const mapTypeSelect = getElement<HTMLSelectElement>('map-type-select');
+  const placeSearchForm = getElement<HTMLFormElement>('place-search-form');
+  const placeSearchInput = getElement<HTMLInputElement>('place-search-input');
+  const placeSearchResults = getElement<HTMLDivElement>('place-search-results');
 
   if (bridge) {
     setPointsSourceStatus('Data source: connecting...');
@@ -190,22 +203,177 @@ const bootstrap = async (): Promise<void> => {
     points = await new MockPointsProvider().loadPoints();
     setPointsSourceStatus(`Data source: fallback (${points.length} points loaded)`);
   }
+
   const state = createInitialState(points);
-  const mapContext = createMapContext('map', state.points);
-  initSidebarResize(mapContext.map);
+
+  const createEngineByMode = (mode: MapMode): MapEngine => {
+    return mode === '3d'
+      ? createCesiumEngine('map', state.points)
+      : createLeafletEngine('map', state.points);
+  };
+
+  const storedMapMode = window.localStorage.getItem(MAP_MODE_STORAGE_KEY);
+  const initialMapMode: MapMode = isMapMode(storedMapMode) ? storedMapMode : '2d';
+  mapModeSelect.value = initialMapMode;
+  window.localStorage.setItem(MAP_MODE_STORAGE_KEY, initialMapMode);
+
+  let mapEngine = createEngineByMode(initialMapMode);
+
+  initSidebarResize(() => {
+    mapEngine.handleContainerResize();
+  });
 
   const storedMapType = window.localStorage.getItem(MAP_TYPE_STORAGE_KEY);
   if (isBaseMapType(storedMapType)) {
     mapTypeSelect.value = storedMapType;
-    mapContext.setBaseMap(storedMapType);
+    mapEngine.setBaseMap(storedMapType);
   }
 
   const storedHeatmapVisible = window.localStorage.getItem(HEATMAP_VISIBLE_STORAGE_KEY);
   if (storedHeatmapVisible === 'true' || storedHeatmapVisible === 'false') {
     const isVisible = storedHeatmapVisible === 'true';
     heatmapToggle.checked = isVisible;
-    mapContext.setHeatmapVisible(isVisible);
+    mapEngine.setHeatmapVisible(isVisible);
   }
+
+  const installDrawControlsForActiveEngine = (): void => {
+    const controlsInstalled = mapEngine.installDrawControls(drawPluginReady, {
+      onPolygonCreated: ({ layer, feature }) => {
+        const impact = derivePolygonImpact(feature);
+        state.polygons.push({
+          layer,
+          feature,
+          ...impact,
+        });
+
+        void syncAfterGeometryChange();
+      },
+      onPolygonsEdited: (editedPolygons) => {
+        for (const edited of editedPolygons) {
+          const target = state.polygons.find((item) => item.layer === edited.layer);
+          if (!target) {
+            continue;
+          }
+
+          const impact = derivePolygonImpact(edited.feature);
+          target.feature = edited.feature;
+          target.areaM2 = impact.areaM2;
+          target.treeCount = impact.treeCount;
+          target.cooling = impact.cooling;
+        }
+
+        void syncAfterGeometryChange();
+      },
+      onPolygonsDeleted: (deletedLayers) => {
+        state.polygons = state.polygons.filter(
+          (polygon) => !deletedLayers.some((layer) => layer === polygon.layer),
+        );
+
+        void syncAfterGeometryChange();
+      },
+    });
+
+    if (controlsInstalled) {
+      return;
+    }
+
+    if (mapEngine.mode === '3d') {
+      state.briefingText =
+        '3D mode is live with globe heat rendering. Use 2D mode to draw or edit canopy zones.';
+      renderPanel(state, panelElements);
+      return;
+    }
+
+    state.briefingText =
+      'Map loaded, but drawing tools failed to initialize. Check console for plugin errors.';
+    renderPanel(state, panelElements);
+  };
+
+  const applyMapMode = (mode: MapMode): void => {
+    if (mode === mapEngine.mode) {
+      window.localStorage.setItem(MAP_MODE_STORAGE_KEY, mode);
+      return;
+    }
+
+    mapEngine.destroy();
+    mapEngine = createEngineByMode(mode);
+    window.localStorage.setItem(MAP_MODE_STORAGE_KEY, mode);
+
+    const selectedMapType = mapTypeSelect.value;
+    if (isBaseMapType(selectedMapType)) {
+      mapEngine.setBaseMap(selectedMapType);
+    }
+
+    mapEngine.setHeatmapVisible(heatmapToggle.checked);
+    mapEngine.updateHeat(state.points);
+    installDrawControlsForActiveEngine();
+    mapEngine.handleContainerResize();
+  };
+
+  const renderPlaceSearchResults = (results: PlaceSearchResult[], loading = false): void => {
+    placeSearchResults.innerHTML = '';
+
+    if (loading) {
+      placeSearchResults.textContent = 'Searching...';
+      return;
+    }
+
+    if (!results.length) {
+      placeSearchResults.textContent = 'No matching places found.';
+      return;
+    }
+
+    for (const result of results) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'search-result-item';
+      button.textContent = result.display_name;
+      button.addEventListener('click', () => {
+        const lat = Number(result.lat);
+        const lng = Number(result.lon);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+          return;
+        }
+
+        mapEngine.flyToLocation(lat, lng);
+        placeSearchInput.value = result.display_name;
+        placeSearchResults.innerHTML = '';
+      });
+
+      placeSearchResults.appendChild(button);
+    }
+  };
+
+  const runPlaceSearch = async (query: string): Promise<void> => {
+    const trimmed = query.trim();
+    if (!trimmed) {
+      placeSearchResults.innerHTML = '';
+      return;
+    }
+
+    renderPlaceSearchResults([], true);
+
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&countrycodes=gb&q=${encodeURIComponent(trimmed)}`,
+        {
+          headers: {
+            Accept: 'application/json',
+          },
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(`Search failed with status ${response.status}`);
+      }
+
+      const results = (await response.json()) as PlaceSearchResult[];
+      renderPlaceSearchResults(results);
+    } catch (error) {
+      console.error('Place search failed', error);
+      placeSearchResults.textContent = 'Search is unavailable right now.';
+    }
+  };
 
   themeToggle.addEventListener('click', () => {
     const currentTheme =
@@ -213,8 +381,17 @@ const bootstrap = async (): Promise<void> => {
     applyTheme(currentTheme === 'dark' ? 'light' : 'dark');
   });
 
+  mapModeSelect.addEventListener('change', () => {
+    const selectedMode = mapModeSelect.value;
+    if (!isMapMode(selectedMode)) {
+      return;
+    }
+
+    applyMapMode(selectedMode);
+  });
+
   heatmapToggle.addEventListener('change', () => {
-    mapContext.setHeatmapVisible(heatmapToggle.checked);
+    mapEngine.setHeatmapVisible(heatmapToggle.checked);
     window.localStorage.setItem(HEATMAP_VISIBLE_STORAGE_KEY, String(heatmapToggle.checked));
   });
 
@@ -224,8 +401,13 @@ const bootstrap = async (): Promise<void> => {
       return;
     }
 
-    mapContext.setBaseMap(selectedMapType);
+    mapEngine.setBaseMap(selectedMapType);
     window.localStorage.setItem(MAP_TYPE_STORAGE_KEY, selectedMapType);
+  });
+
+  placeSearchForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    void runPlaceSearch(placeSearchInput.value);
   });
 
   const runSimulation = async (): Promise<void> => {
@@ -245,7 +427,7 @@ const bootstrap = async (): Promise<void> => {
       state.hasCalculated = true;
       state.briefingText = 'Generating planning summary...';
 
-      updateHeatLayer(mapContext.heatLayer, state.points);
+      mapEngine.updateHeat(state.points);
       renderPanel(state, panelElements);
 
       let briefingText = '';
@@ -281,47 +463,7 @@ const bootstrap = async (): Promise<void> => {
     await runSimulation();
   };
 
-  if (drawPluginReady) {
-    installDrawControls(mapContext.map, mapContext.drawnItems, {
-      onPolygonCreated: ({ layer, feature }) => {
-        const impact = derivePolygonImpact(feature);
-        state.polygons.push({
-          layer,
-          feature,
-          ...impact,
-        });
-
-        void syncAfterGeometryChange();
-      },
-      onPolygonsEdited: (editedPolygons) => {
-        for (const edited of editedPolygons) {
-          const target = state.polygons.find((item) => item.layer === edited.layer);
-          if (!target) {
-            continue;
-          }
-
-          const impact = derivePolygonImpact(edited.feature);
-          target.feature = edited.feature;
-          target.areaM2 = impact.areaM2;
-          target.treeCount = impact.treeCount;
-          target.cooling = impact.cooling;
-        }
-
-        void syncAfterGeometryChange();
-      },
-      onPolygonsDeleted: (deletedLayers) => {
-        state.polygons = state.polygons.filter(
-          (polygon) => !deletedLayers.some((layer) => layer === polygon.layer),
-        );
-
-        void syncAfterGeometryChange();
-      },
-    });
-  } else {
-    state.briefingText =
-      'Map loaded, but drawing tools failed to initialize. Check console for plugin errors.';
-    renderPanel(state, panelElements);
-  }
+  installDrawControlsForActiveEngine();
 
   panelElements.recalcButton.addEventListener('click', () => {
     if (!state.polygons.length || state.isCalculating) {
@@ -338,7 +480,7 @@ const bootstrap = async (): Promise<void> => {
   });
 
   panelElements.resetButton.addEventListener('click', () => {
-    mapContext.drawnItems.clearLayers();
+    mapEngine.clearDrawnPolygons();
     state.polygons = [];
     resetPointsToBaseline(state);
     state.metrics = null;
@@ -347,8 +489,12 @@ const bootstrap = async (): Promise<void> => {
     state.briefingText =
       'Draw one or more canopy zones and click Recalculate Impact to generate updated impact metrics.';
 
-    updateHeatLayer(mapContext.heatLayer, state.points);
+    mapEngine.updateHeat(state.points);
     renderPanel(state, panelElements);
+  });
+
+  window.addEventListener('beforeunload', () => {
+    mapEngine.destroy();
   });
 
   renderPanel(state, panelElements);

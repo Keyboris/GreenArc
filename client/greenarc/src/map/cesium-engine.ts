@@ -46,6 +46,43 @@ const HEAT_WEIGHT_TO_CONFIDENCE_GAIN = 0.22;
 const HEAT_ALPHA_MIN = 32;
 const HEAT_ALPHA_RANGE = 180;
 
+type ToolbarIconPath = {
+  d: string;
+  fill?: string;
+  stroke?: string;
+  strokeWidth?: string;
+  strokeLinecap?: 'round' | 'butt' | 'square';
+  strokeLinejoin?: 'round' | 'miter' | 'bevel';
+};
+
+const createToolbarIcon = (paths: ToolbarIconPath[]): SVGSVGElement => {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('width', '16');
+  svg.setAttribute('height', '16');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.classList.add('toolbar-icon');
+
+  paths.forEach((pathConfig) => {
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', pathConfig.d);
+    path.setAttribute('fill', pathConfig.fill ?? 'none');
+    path.setAttribute('stroke', pathConfig.stroke ?? 'currentColor');
+    path.setAttribute('stroke-width', pathConfig.strokeWidth ?? '1.75');
+    path.setAttribute('stroke-linecap', pathConfig.strokeLinecap ?? 'round');
+    path.setAttribute('stroke-linejoin', pathConfig.strokeLinejoin ?? 'round');
+    svg.appendChild(path);
+  });
+
+  return svg;
+};
+
+const setToolbarButtonIcon = (button: HTMLButtonElement, label: string, paths: ToolbarIconPath[]): void => {
+  button.setAttribute('aria-label', label);
+  button.title = label;
+  button.replaceChildren(createToolbarIcon(paths));
+};
+
 const clamp = (value: number, min: number, max: number): number => {
   return Math.max(min, Math.min(max, value));
 };
@@ -434,16 +471,27 @@ export const createCesiumEngine = (containerId: string, points: HeatPoint[]): Ma
 
     const drawButton = document.createElement('button');
     drawButton.type = 'button';
-    drawButton.textContent = 'Draw 3D';
+    setToolbarButtonIcon(drawButton, 'Draw polygon', [
+      { d: 'M6 6L18 9L15 18L5 15Z' },
+      { d: 'M10 3L9 5L11 7L19 7L20 6L18 4Z' },
+    ]);
 
     const finish = document.createElement('button');
     finish.type = 'button';
-    finish.textContent = 'Finish';
+    setToolbarButtonIcon(finish, 'Finish drawing', [
+      { d: 'M5 4L18 10L13 11L11 18Z' },
+    ]);
     finish.disabled = true;
 
     const clearButton = document.createElement('button');
     clearButton.type = 'button';
-    clearButton.textContent = 'Clear';
+    setToolbarButtonIcon(clearButton, 'Clear polygons', [
+      { d: 'M4 7H20' },
+      { d: 'M9 7V5H15V7' },
+      { d: 'M7 7L8 19H16L17 7' },
+      { d: 'M10 11V16' },
+      { d: 'M14 11V16' },
+    ]);
 
     const status = document.createElement('span');
     status.className = 'toolbar-status';

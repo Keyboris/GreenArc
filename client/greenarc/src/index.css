@@ -213,6 +213,9 @@ body {
 }
 
 .map-floating-toolbar button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid var(--card-border);
   border-radius: 8px;
   background: var(--panel-bg);
@@ -221,6 +224,11 @@ body {
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
+}
+
+.map-floating-toolbar .toolbar-icon {
+  display: block;
+  pointer-events: none;
 }
 
 .map-floating-toolbar button:disabled {
@@ -354,6 +362,57 @@ body.is-resizing {
   padding: 6px 8px;
 }
 
+.switch {
+  position: relative;
+  display: inline-flex;
+  width: 42px;
+  height: 24px;
+}
+
+.switch input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.switch-track {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 6px;
+  background: color-mix(in oklab, var(--card-border) 78%, transparent);
+  border: 1px solid color-mix(in oklab, var(--card-border) 86%, transparent);
+  transition: background-color 140ms ease;
+}
+
+.switch-track::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.28);
+  transition: transform 140ms ease;
+}
+
+.switch input:checked + .switch-track {
+  background: var(--accent);
+}
+
+.switch input:checked + .switch-track::after {
+  transform: translateX(18px);
+}
+
+.switch input:focus-visible + .switch-track {
+  outline: 2px solid color-mix(in oklab, var(--accent) 65%, white);
+  outline-offset: 2px;
+}
+
 .metrics-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -466,6 +525,19 @@ body.is-resizing {
 
 .action-danger-outline:hover {
   background: var(--danger-soft);
+}
+
+#reset-button {
+  display: block;
+  width: 50%;
+  margin: 0 auto;
+  border: 0;
+  background: var(--danger);
+  color: #ffffff;
+}
+
+#reset-button:hover {
+  background: color-mix(in oklab, var(--danger) 86%, black);
 }
 
 @media (max-width: 900px) {
